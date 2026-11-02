@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/maps/floor_map_screen.dart';
 
 Future<void> main() async {
   // Initialize Flutter before using Firebase.
@@ -29,16 +30,7 @@ class CleanConnectApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const Scaffold(
-        body: Center(
-          child: Text(
-            'Clean Connect\nFirebase Connected!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+        body: TestRoomScreen(),
       ),
     );
   }
