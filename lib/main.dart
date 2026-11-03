@@ -1,19 +1,17 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+
 import 'firebase_options.dart';
+import 'screens/dashboard/main_dashboard.dart';
 import 'screens/maps/floor_map_screen.dart';
 
-Future<void> main() async {
-  // Initialize Flutter before using Firebase.
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Connect the application to Firebase.
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Start the application.
   runApp(const CleanConnectApp());
 }
 
@@ -26,9 +24,11 @@ class CleanConnectApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Clean Connect',
       theme: ThemeData(
-        colorSchemeSeed: Colors.teal,
         useMaterial3: true,
+        fontFamily: 'Poppins',
+        scaffoldBackgroundColor: Colors.white,
       ),
+      home: const MainDashboard(),
       home: const Scaffold(
         body: TestRoomScreen(),
       ),
