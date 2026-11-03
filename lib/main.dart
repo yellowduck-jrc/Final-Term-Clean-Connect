@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
 import 'screens/dashboard/main_dashboard.dart';
+import 'screens/maps/floor_map_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,9 @@ class CleanConnectApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
       ),
       home: const MainDashboard(),
+      home: const Scaffold(
+        body: TestRoomScreen(),
+      ),
     );
   }
 }
