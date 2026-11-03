@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-
+import 'app/app_routes.dart';
 Future<void> main() async {
   // Initialize Flutter before using Firebase.
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,7 @@ Future<void> main() async {
 class CleanConnectApp extends StatelessWidget {
   const CleanConnectApp({super.key});
 
-  @override
+@override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -28,18 +28,8 @@ class CleanConnectApp extends StatelessWidget {
         colorSchemeSeed: Colors.teal,
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'Clean Connect\nFirebase Connected!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+      initialRoute: AppRoutes.login,
+      routes: AppRoutes.routes,
     );
   }
 }
