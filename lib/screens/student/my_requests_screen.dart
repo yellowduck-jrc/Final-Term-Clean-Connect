@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../app/navigation_observer.dart';
+import '../../app/app_routes.dart';
+import '../../models/request_model.dart';
+import '../../services/request_service.dart';
+import '../../widgets/request_card.dart';
 import '../dashboard/main_dashboard.dart';
-import 'file_request_screen.dart';
+import '../maps/floor_map_screen.dart';
+import '../shared/notifications_screen.dart';
+import 'request_details_screen.dart';
 
 class MyRequestsScreen extends StatelessWidget {
   const MyRequestsScreen({super.key});
@@ -12,16 +18,12 @@ class MyRequestsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     User? user = FirebaseAuth.instance.currentUser;
 
-    void showMessage(String message) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.white,
 
       appBar: AppBar(
+        leading: const NavigationBackButton(),
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF242735),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -31,9 +33,12 @@ class MyRequestsScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              showMessage('No new notifications.');
-            },
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsScreen(),
+              ),
+            ),
             icon: const Icon(Icons.notifications_none),
           ),
         ],
@@ -59,20 +64,16 @@ class MyRequestsScreen extends StatelessWidget {
                           'Please log in to view your requests.',
                         ),
                       )
-                    : StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('requests')
-                            .where(
-                              'reportedBy',
-                              isEqualTo: user.uid,
-                            )
-                            .snapshots(),
+                    : StreamBuilder<List<RequestModel>>(
+                        stream: RequestService()
+                            .watchRequestsByReporter(user.uid),
 
                         builder: (context, snapshot) {
                           if (snapshot.hasError) {
-                            return const Center(
+                            return Center(
                               child: Text(
-                                'Unable to load your requests.',
+                                'Unable to load your requests: '
+                                '${snapshot.error}',
                               ),
                             );
                           }
@@ -84,30 +85,7 @@ class MyRequestsScreen extends StatelessWidget {
                             );
                           }
 
-                          List<QueryDocumentSnapshot> requests =
-                              snapshot.data?.docs ?? [];
-
-                          requests.sort((a, b) {
-                            Map<String, dynamic> first =
-                                a.data() as Map<String, dynamic>;
-
-                            Map<String, dynamic> second =
-                                b.data() as Map<String, dynamic>;
-
-                            int dateA =
-                                first['createdAt'] is Timestamp
-                                    ? (first['createdAt'] as Timestamp)
-                                        .millisecondsSinceEpoch
-                                    : 0;
-
-                            int dateB =
-                                second['createdAt'] is Timestamp
-                                    ? (second['createdAt'] as Timestamp)
-                                        .millisecondsSinceEpoch
-                                    : 0;
-
-                            return dateB.compareTo(dateA);
-                          });
+                          final requests = snapshot.data ?? [];
 
                           if (requests.isEmpty) {
                             return const Center(
@@ -124,23 +102,23 @@ class MyRequestsScreen extends StatelessWidget {
                           return ListView.builder(
                             itemCount: requests.length,
                             itemBuilder: (context, index) {
-                              Map<String, dynamic> data =
-                                  requests[index].data()
-                                      as Map<String, dynamic>;
+                              final request = requests[index];
 
                               return Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: 9,
                                 ),
-                                child: CleaningRequestCard(
-                                  data: data,
-                                  onTap: () {
-                                    String description =
-                                        data['description'] ??
-                                            'Cleaning request';
-
-                                    showMessage(description);
-                                  },
+                                child: RequestCard(
+                                  request: request,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) =>
+                                          RequestDetailsScreen(
+                                            request: request,
+                                          ),
+                                    ),
+                                  ),
                                 ),
                               );
                             },
@@ -159,8 +137,7 @@ class MyRequestsScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const FileRequestScreen(),
+                        builder: (context) => const FloorMapScreen(),
                       ),
                     );
                   },
@@ -201,8 +178,10 @@ class MyRequestsScreen extends StatelessWidget {
                 builder: (context) => const MainDashboard(),
               ),
             );
-          } else if (index == 2 || index == 3) {
-            showMessage('This screen is not connected yet.');
+          } else if (index == 2) {
+            Navigator.pushNamed(context, AppRoutes.map);
+          } else if (index == 3) {
+            Navigator.pushNamed(context, AppRoutes.profile);
           }
         },
       ),

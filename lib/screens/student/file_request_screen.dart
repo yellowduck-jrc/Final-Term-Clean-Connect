@@ -1,28 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../app/navigation_observer.dart';
+import '../../app/app_routes.dart';
 import '../dashboard/main_dashboard.dart';
 import 'my_requests_screen.dart';
+import '../../models/facility_model.dart';
+import '../../services/request_service.dart';
+import '../../services/user_service.dart';
 
 class FileRequestScreen extends StatefulWidget {
-  const FileRequestScreen({super.key});
+  const FileRequestScreen({
+    super.key,
+    this.initialFacility,
+    this.initialFacilityId,
+    this.roomName,
+    this.floor,
+  });
+
+  final FacilityModel? initialFacility;
+  final String? initialFacilityId;
+  final String? roomName;
+  final int? floor;
 
   @override
-  State<FileRequestScreen> createState() =>
-      _FileRequestScreenState();
+  State<FileRequestScreen> createState() => _FileRequestScreenState();
 }
 
 class _FileRequestScreenState extends State<FileRequestScreen> {
-  final TextEditingController descriptionController =
-      TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
 
   String? selectedFacilityId;
+  String? selectedRoomName;
+  int? selectedFloor;
   String issueType = 'cleaning';
   bool isSubmitting = false;
 
   final Color navy = const Color(0xFF242735);
   final Color green = const Color(0xFF20A879);
+
+  @override
+  void initState() {
+    super.initState();
+    selectedFacilityId = widget.initialFacility?.id ?? widget.initialFacilityId;
+    selectedRoomName =
+        widget.initialFacility?.roomName ??
+        widget.roomName ??
+        selectedFacilityId;
+    selectedFloor = widget.initialFacility?.floor ?? widget.floor;
+  }
 
   @override
   void dispose() {
@@ -31,6 +57,8 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   }
 
   Future<void> submitRequest() async {
+    if (isSubmitting) return;
+
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -38,8 +66,8 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
       return;
     }
 
-    if (selectedFacilityId == null) {
-      showMessage('Please select a room.');
+    if (selectedFacilityId == null || selectedFloor == null) {
+      showMessage('Choose a room from the map before submitting.');
       return;
     }
 
@@ -53,37 +81,19 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
     });
 
     try {
-      DocumentSnapshot facility = await FirebaseFirestore.instance
-          .collection('facilities')
-          .doc(selectedFacilityId)
-          .get();
-
-      if (!facility.exists) {
-        showMessage('The selected room no longer exists.');
+      final profile = await UserService().getUser(user.uid);
+      if (profile?.role != 'student') {
+        showMessage('Only student accounts can submit cleaning requests.');
         return;
       }
 
-      Map<String, dynamic> facilityData =
-          facility.data() as Map<String, dynamic>;
-
-      if (facilityData['isActive'] != true) {
-        showMessage('This room is currently unavailable.');
-        return;
-      }
-
-      await FirebaseFirestore.instance.collection('requests').add({
-        'reportedBy': user.uid,
-        'facilityId':
-            facilityData['facilityId'] ?? facility.id,
-        'floor': facilityData['floor'],
-        'issueType': issueType,
-        'description': descriptionController.text.trim(),
-        'status': 'pending',
-        'assignedTo': null,
-        'createdAt': FieldValue.serverTimestamp(),
-        'acceptedAt': null,
-        'completedAt': null,
-      });
+      await RequestService().createRequest(
+        reportedBy: user.uid,
+        facilityId: selectedFacilityId!,
+        floor: selectedFloor!,
+        issueType: issueType,
+        description: descriptionController.text,
+      );
 
       if (!mounted) return;
 
@@ -97,17 +107,20 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
 
       setState(() {
         selectedFacilityId = null;
+        selectedRoomName = null;
+        selectedFloor = null;
         issueType = 'cleaning';
       });
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const MyRequestsScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const MyRequestsScreen()),
       );
-    } catch (e) {
-      showMessage('Failed to submit request. Please try again.');
+    } catch (error) {
+      showMessage(
+        'Failed to submit request: '
+        '${error.toString().replaceFirst('Bad state: ', '')}',
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -118,9 +131,8 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   }
 
   void showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -128,13 +140,12 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: const NavigationBackButton(),
+        automaticallyImplyLeading: false,
         backgroundColor: navy,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Create a request',
-          style: TextStyle(fontSize: 17),
-        ),
+        title: const Text('Create a request', style: TextStyle(fontSize: 17)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -153,114 +164,58 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
               const SizedBox(height: 6),
               const Text(
                 'Tell us where cleaning is needed.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 13, color: Colors.grey),
               ),
               const SizedBox(height: 25),
 
               const Text(
-                'Select room',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+                'Report location',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 8),
-
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('facilities')
-                    .where('isActive', isEqualTo: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return const Text(
-                      'Unable to load rooms.',
-                    );
-                  }
-
-                  if (!snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-
-                  List<QueryDocumentSnapshot> facilities =
-                      snapshot.data!.docs;
-
-                  if (facilities.isEmpty) {
-                    return const Text(
-                      'No active rooms available.',
-                    );
-                  }
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color(0xFFD5D5D5),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F5F7),
+                  border: Border.all(color: const Color(0xFFD5D5D5)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        selectedFacilityId == null
+                            ? 'No room selected'
+                            : '${selectedRoomName ?? selectedFacilityId}'
+                                  '${selectedFloor == null ? '' : ' · Floor $selectedFloor'}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: DropdownButton<String>(
-                      value: facilities.any(
-                        (facility) =>
-                            facility.id == selectedFacilityId,
-                      )
-                          ? selectedFacilityId
-                          : null,
-                      isExpanded: true,
-                      underline: const SizedBox(),
-                      hint: const Text('Choose a room'),
-                      items: facilities.map((facility) {
-                        Map<String, dynamic> data =
-                            facility.data()
-                                as Map<String, dynamic>;
-
-                        String roomName =
-                            data['roomName'] ?? facility.id;
-                        String floor = '${data['floor'] ?? '?'}';
-
-                        return DropdownMenuItem<String>(
-                          value: facility.id,
-                          child: Text(
-                            '$roomName - Floor $floor',
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedFacilityId = value;
-                        });
-                      },
-                    ),
-                  );
-                },
+                    if (selectedFacilityId == null)
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, AppRoutes.map),
+                        child: const Text('Choose on map'),
+                      ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 22),
 
               const Text(
                 'Issue type',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 8),
 
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: const Color(0xFFD5D5D5),
-                  ),
+                  border: Border.all(color: const Color(0xFFD5D5D5)),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: DropdownButton<String>(
@@ -272,14 +227,8 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
                       value: 'cleaning',
                       child: Text('Cleaning'),
                     ),
-                    DropdownMenuItem(
-                      value: 'spill',
-                      child: Text('Spill'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'trash',
-                      child: Text('Trash'),
-                    ),
+                    DropdownMenuItem(value: 'spill', child: Text('Spill')),
+                    DropdownMenuItem(value: 'trash', child: Text('Trash')),
                     DropdownMenuItem(
                       value: 'restroom',
                       child: Text('Restroom'),
@@ -299,10 +248,7 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
 
               const Text(
                 'Description',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 8),
 
@@ -316,9 +262,7 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFD5D5D5),
-                    ),
+                    borderSide: const BorderSide(color: Color(0xFFD5D5D5)),
                   ),
                 ),
               ),
@@ -348,9 +292,7 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
                         )
                       : const Text(
                           'Submit request',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                 ),
               ),
@@ -364,20 +306,18 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
           if (index == 0) {
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (context) => const MainDashboard(),
-              ),
+              MaterialPageRoute(builder: (context) => const MainDashboard()),
               (route) => false,
             );
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (context) => const MyRequestsScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const MyRequestsScreen()),
             );
-          } else if (index == 2 || index == 3) {
-            showMessage('This screen is not connected yet.');
+          } else if (index == 2) {
+            Navigator.pushNamed(context, AppRoutes.map);
+          } else if (index == 3) {
+            Navigator.pushNamed(context, AppRoutes.profile);
           }
         },
       ),

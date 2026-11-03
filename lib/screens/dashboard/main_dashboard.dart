@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+
+import '../../app/navigation_observer.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../student/file_request_screen.dart';
+import '../../app/app_routes.dart';
+import '../../models/request_model.dart';
+import '../../widgets/request_card.dart';
+import '../maps/floor_map_screen.dart';
+import '../shared/notifications_screen.dart';
+import '../student/request_details_screen.dart';
 import '../student/my_requests_screen.dart';
 
 class MainDashboard extends StatefulWidget {
@@ -43,17 +51,13 @@ class _MainDashboardState extends State<MainDashboard> {
         });
       } else {
         setState(() {
-          userName = user.displayName ??
-              user.email?.split('@')[0] ??
-              'User';
+          userName = user.displayName ?? user.email?.split('@')[0] ?? 'User';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          userName = user.displayName ??
-              user.email?.split('@')[0] ??
-              'User';
+          userName = user.displayName ?? user.email?.split('@')[0] ?? 'User';
         });
       }
     }
@@ -62,18 +66,14 @@ class _MainDashboardState extends State<MainDashboard> {
   void openRequests() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const MyRequestsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const MyRequestsScreen()),
     );
   }
 
   void openRequestForm() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const FileRequestScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const FloorMapScreen()),
     );
   }
 
@@ -84,22 +84,21 @@ class _MainDashboardState extends State<MainDashboard> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: const NavigationBackButton(),
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF242735),
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Clean Connect',
-          style: TextStyle(fontSize: 17),
-        ),
+        title: const Text('Clean Connect', style: TextStyle(fontSize: 17)),
         actions: [
           IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No new notifications.'),
-                ),
-              );
-            },
+            tooltip: 'Request updates',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsScreen(),
+              ),
+            ),
             icon: const Icon(Icons.notifications_none),
           ),
         ],
@@ -115,11 +114,7 @@ class _MainDashboardState extends State<MainDashboard> {
                   const CircleAvatar(
                     radius: 23,
                     backgroundColor: Color(0xFFE8E8E8),
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.black54,
-                      size: 28,
-                    ),
+                    child: Icon(Icons.person, color: Colors.black54, size: 28),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -191,24 +186,19 @@ class _MainDashboardState extends State<MainDashboard> {
                 ),
               ),
               const SizedBox(height: 14),
+              if (user != null) _StudentRequestStats(uid: user.uid),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
                     'Recent Requests',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   TextButton(
                     onPressed: openRequests,
                     child: const Text(
                       'View All  ❯',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF3478F6),
-                      ),
+                      style: TextStyle(fontSize: 10, color: Color(0xFF3478F6)),
                     ),
                   ),
                 ],
@@ -226,11 +216,8 @@ class _MainDashboardState extends State<MainDashboard> {
                       return const Text('Unable to load requests.');
                     }
 
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     List<QueryDocumentSnapshot> docs =
@@ -244,12 +231,12 @@ class _MainDashboardState extends State<MainDashboard> {
 
                       int dateA = first['createdAt'] is Timestamp
                           ? (first['createdAt'] as Timestamp)
-                              .millisecondsSinceEpoch
+                                .millisecondsSinceEpoch
                           : 0;
 
                       int dateB = second['createdAt'] is Timestamp
                           ? (second['createdAt'] as Timestamp)
-                              .millisecondsSinceEpoch
+                                .millisecondsSinceEpoch
                           : 0;
 
                       return dateB.compareTo(dateA);
@@ -258,10 +245,7 @@ class _MainDashboardState extends State<MainDashboard> {
                     if (docs.isEmpty) {
                       return const Text(
                         'You have no cleaning requests yet.',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       );
                     }
 
@@ -269,9 +253,22 @@ class _MainDashboardState extends State<MainDashboard> {
                       children: docs.take(2).map((doc) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 9),
-                          child: CleaningRequestCard(
-                            data: doc.data() as Map<String, dynamic>,
-                            onTap: openRequests,
+                          child: RequestCard(
+                            request: RequestModel.fromMap(
+                              doc.data() as Map<String, dynamic>,
+                              id: doc.id,
+                            ),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => RequestDetailsScreen(
+                                  request: RequestModel.fromMap(
+                                    doc.data() as Map<String, dynamic>,
+                                    id: doc.id,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       }).toList(),
@@ -287,17 +284,95 @@ class _MainDashboardState extends State<MainDashboard> {
         onTap: (index) {
           if (index == 1) {
             openRequests();
-          } else if (index == 2 || index == 3) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('This screen is not connected yet.'),
-              ),
-            );
+          } else if (index == 2) {
+            Navigator.pushNamed(context, AppRoutes.map);
+          } else if (index == 3) {
+            Navigator.pushNamed(context, AppRoutes.profile);
           }
         },
       ),
     );
   }
+}
+
+class _StudentRequestStats extends StatelessWidget {
+  const _StudentRequestStats({required this.uid});
+
+  final String uid;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('requests')
+          .where('reportedBy', isEqualTo: uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text('Unable to load request statistics: ${snapshot.error}');
+        }
+        if (!snapshot.hasData) {
+          return const LinearProgressIndicator();
+        }
+        final docs = snapshot.data!.docs;
+        final pending = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['status'] == 'pending';
+        }).length;
+        final completed = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['status'] == 'completed';
+        }).length;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: _StudentStatCard(
+                  label: 'Total requests',
+                  value: docs.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StudentStatCard(label: 'Pending', value: pending),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StudentStatCard(label: 'Completed', value: completed),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StudentStatCard extends StatelessWidget {
+  const _StudentStatCard({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF3F5F7),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Column(
+      children: [
+        Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 10),
+        ),
+      ],
+    ),
+  );
 }
 
 class CleaningRequestCard extends StatelessWidget {
@@ -312,8 +387,7 @@ class CleaningRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String description =
-        data['description'] ?? 'Cleaning request';
+    String description = data['description'] ?? 'Cleaning request';
     String facilityId = data['facilityId'] ?? 'Unknown facility';
     String issueType = data['issueType'] ?? 'cleaning';
     String floor = '${data['floor'] ?? '?'}';
@@ -364,10 +438,7 @@ class CleaningRequestCard extends StatelessWidget {
             ),
             Text(
               '$facilityId  ${issueType.toUpperCase()}',
-              style: const TextStyle(
-                fontSize: 9,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 9, color: Colors.grey),
             ),
             const SizedBox(height: 5),
             Row(
@@ -377,10 +448,7 @@ class CleaningRequestCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Floor $floor | $facilityId',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 9, color: Colors.grey),
                   ),
                 ),
                 Container(
@@ -457,10 +525,7 @@ class CustomBottomNav extends StatelessWidget {
                       child: Icon(icons[index], size: 19),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      labels[index],
-                      style: const TextStyle(fontSize: 10),
-                    ),
+                    Text(labels[index], style: const TextStyle(fontSize: 10)),
                   ],
                 ),
               ),
