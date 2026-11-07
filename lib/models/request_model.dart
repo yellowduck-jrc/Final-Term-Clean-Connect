@@ -11,6 +11,8 @@ class RequestModel {
     required this.status,
     required this.createdAt,
     this.assignedTo,
+    this.isAdminAssigned = false,
+    this.imageUrl,
     this.acceptedAt,
     this.completedAt,
   });
@@ -23,6 +25,8 @@ class RequestModel {
   final String reportedBy;
   final String status;
   final String? assignedTo;
+  final bool isAdminAssigned;
+  final String? imageUrl;
   final DateTime? createdAt;
   final DateTime? acceptedAt;
   final DateTime? completedAt;
@@ -37,6 +41,8 @@ class RequestModel {
       reportedBy: (data['reportedBy'] as String?) ?? '',
       status: ((data['status'] as String?) ?? 'pending').toLowerCase(),
       assignedTo: data['assignedTo'] as String?,
+      isAdminAssigned: data['isAdminAssigned'] as bool? ?? false,
+      imageUrl: data['imageUrl'] as String?,
       createdAt: _dateTime(data['createdAt']),
       acceptedAt: _dateTime(data['acceptedAt']),
       completedAt: _dateTime(data['completedAt']),

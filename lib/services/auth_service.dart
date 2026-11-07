@@ -36,8 +36,9 @@ class AuthService {
         'This email is already registered in Clean Connect. Sign in instead.',
       'invalid-email' => 'Enter a valid email address.',
       'weak-password' => 'Choose a stronger password.',
-      'user-not-found' || 'wrong-password' || 'invalid-credential' =>
-        'The email or password is incorrect.',
+      'user-not-found' ||
+      'wrong-password' ||
+      'invalid-credential' => 'The email or password is incorrect.',
       'user-disabled' => 'This account has been disabled.',
       'operation-not-allowed' =>
         'Email sign-in is unavailable. Contact the app administrator.',
@@ -52,10 +53,7 @@ class AuthService {
     };
   }
 
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -91,6 +89,56 @@ class AuthService {
 
   Future<void> sendPasswordReset(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<bool> updateProfile({
+    required String fullName,
+    required String email,
+    String? currentPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('Sign in before updating your profile.');
+    }
+
+    final normalizedName = fullName.trim();
+    final normalizedEmail = email.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError('Full name cannot be empty.');
+    }
+    if (validateEmail(normalizedEmail) != null) {
+      throw ArgumentError('Enter a valid email address.');
+    }
+
+    final emailChanged = normalizedEmail != user.email;
+    if (emailChanged) {
+      final password = currentPassword;
+      if (password == null || password.isEmpty || user.email == null) {
+        throw ArgumentError(
+          'Enter your current password to change your email address.',
+        );
+      }
+
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.verifyBeforeUpdateEmail(normalizedEmail);
+    }
+
+    await user.updateDisplayName(normalizedName);
+    final profile = await _users.getUser(user.uid);
+    await _users.saveProfile(
+      AppUserModel(
+        uid: user.uid,
+        fullName: normalizedName,
+        email: user.email ?? profile?.email ?? normalizedEmail,
+        role: profile?.role ?? 'student',
+        isActive: profile?.isActive ?? true,
+      ),
+    );
+    return emailChanged;
   }
 
   Future<void> signOut() => _auth.signOut();

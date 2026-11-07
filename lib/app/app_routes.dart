@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'navigation_observer.dart';
 import '../models/app_user_model.dart';
 import '../models/request_model.dart';
 import '../services/user_service.dart';
@@ -29,16 +30,16 @@ class AppRoutes {
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
   static const studentDashboard = '/student';
-  static const staffDashboard = '/staff';
+  static const staffDashboard = AppNavigationObserver.staffDashboardRoute;
   static const adminDashboard = '/admin';
-  static const map = '/map';
-  static const myRequests = '/requests';
-  static const availableRequests = '/staff/available';
+  static const map = AppNavigationObserver.mapRoute;
+  static const myRequests = AppNavigationObserver.requestsRoute;
+  static const availableRequests = AppNavigationObserver.staffRequestsRoute;
   static const assignedRequests = '/staff/assigned';
   static const manageUsers = '/admin/users';
   static const manageRequests = '/admin/requests';
   static const manageFacilities = '/admin/facilities';
-  static const profile = '/profile';
+  static const profile = AppNavigationObserver.profileRoute;
   static const notifications = '/notifications';
   static const requestDetails = '/request-details';
   static const staffRequestDetails = '/staff/request-details';
@@ -98,20 +99,29 @@ class AdminBottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const destinations = [
-      (icon: Icons.dashboard_outlined, label: 'Overview'),
-      (icon: Icons.list_alt_outlined, label: 'Requests'),
-      (icon: Icons.people_outline, label: 'Users'),
+      (icon: Icons.home_outlined, label: 'Home'),
+      (icon: Icons.fact_check_outlined, label: 'Requests'),
+      (icon: Icons.map_outlined, label: 'Map'),
       (icon: Icons.person_outline, label: 'Profile'),
     ];
     const routes = [
       AppRoutes.adminDashboard,
       AppRoutes.manageRequests,
-      AppRoutes.manageUsers,
+      AppRoutes.map,
       AppRoutes.profile,
     ];
+    final routeName = ModalRoute.of(context)?.settings.name;
+    final currentIndex = switch (routeName) {
+      AppRoutes.adminDashboard => 0,
+      AppRoutes.manageRequests => 1,
+      AppRoutes.map => 2,
+      AppRoutes.profile => 3,
+      AppRoutes.manageUsers || AppRoutes.manageFacilities => -1,
+      _ => selectedIndex == 2 ? -1 : selectedIndex,
+    };
 
     return Container(
-      color: const Color(0xFF8BB8E1),
+      color: const Color(0xFFD9D9D9),
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: SafeArea(
         top: false,
@@ -120,9 +130,16 @@ class AdminBottomNavigationBar extends StatelessWidget {
             for (var index = 0; index < destinations.length; index++)
               Expanded(
                 child: InkWell(
+                  mouseCursor: SystemMouseCursors.click,
                   onTap: () {
-                    if (index != selectedIndex) {
-                      if (index == 3) {
+                    if (index != currentIndex) {
+                      if (index == 0) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          routes[index],
+                          (_) => false,
+                        );
+                      } else if (index == 3) {
                         Navigator.pushNamed(context, routes[index]);
                       } else {
                         Navigator.pushReplacementNamed(context, routes[index]);
@@ -133,25 +150,27 @@ class AdminBottomNavigationBar extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
+                        width: 48,
+                        height: 24,
                         decoration: BoxDecoration(
-                          color: index == selectedIndex
-                              ? const Color(0xFF6FA2D0)
+                          color: index == currentIndex
+                              ? const Color(0xFF399849)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(9),
                         ),
-                        child: Icon(destinations[index].icon, size: 25),
+                        child: Icon(
+                          destinations[index].icon,
+                          size: 17,
+                          color: index == currentIndex
+                              ? Colors.white
+                              : const Color(0xFF292929),
+                        ),
                       ),
                       Text(
                         destinations[index].label,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: index == selectedIndex
-                              ? FontWeight.w700
-                              : FontWeight.normal,
+                        style: const TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 9,
                         ),
                       ),
                     ],

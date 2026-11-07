@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/request_model.dart';
 import 'facility_service.dart';
@@ -18,6 +21,8 @@ class RequestService {
     required int floor,
     required String issueType,
     required String description,
+    Uint8List? imageBytes,
+    String imageExtension = 'jpg',
   }) async {
     if (reportedBy.trim().isEmpty ||
         facilityId.trim().isEmpty ||
@@ -38,7 +43,21 @@ class RequestService {
       );
     }
 
-    final doc = await _requests.add({
+    final doc = _requests.doc();
+    String? imageUrl;
+    if (imageBytes != null) {
+      final extension = _normalizedImageExtension(imageExtension);
+      final imageReference = FirebaseStorage.instance.ref().child(
+        'request_photos/${reportedBy.trim()}/${doc.id}.$extension',
+      );
+      await imageReference.putData(
+        imageBytes,
+        SettableMetadata(contentType: _imageContentType(extension)),
+      );
+      imageUrl = await imageReference.getDownloadURL();
+    }
+
+    await doc.set({
       'reportedBy': reportedBy.trim(),
       'facilityId': facilityId.trim(),
       'floor': floor,
@@ -46,15 +65,41 @@ class RequestService {
       'description': description.trim(),
       'status': 'pending',
       'assignedTo': null,
+      'isAdminAssigned': false,
       'createdAt': FieldValue.serverTimestamp(),
       'acceptedAt': null,
       'completedAt': null,
+      'imageUrl': imageUrl,
     });
     return doc.id;
   }
 
+  String _normalizedImageExtension(String extension) {
+    final normalized = extension.toLowerCase().replaceFirst('.', '');
+    return const {'jpg', 'jpeg', 'png', 'webp', 'gif'}.contains(normalized)
+        ? normalized
+        : 'jpg';
+  }
+
+  String _imageContentType(String extension) =>
+      extension == 'jpg' ? 'image/jpeg' : 'image/$extension';
+
   Stream<List<RequestModel>> watchAllRequests() =>
       _watch(_requests.snapshots());
+
+  Stream<RequestModel?> watchRequest(String requestId) {
+    if (requestId.trim().isEmpty) {
+      throw ArgumentError.value(requestId, 'requestId', 'Cannot be empty.');
+    }
+    return _requests
+        .doc(requestId)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.exists
+              ? RequestModel.fromMap(snapshot.data()!, id: snapshot.id)
+              : null,
+        );
+  }
 
   Stream<List<RequestModel>> watchRequestsByReporter(String uid) =>
       _watch(_requests.where('reportedBy', isEqualTo: uid).snapshots());
@@ -116,6 +161,55 @@ class RequestService {
     return RequestModel.fromMap(doc.data()!, id: doc.id);
   }
 
+  Future<void> updateStudentRequest({
+    required String requestId,
+    required String reportedBy,
+    required String issueType,
+    required String description,
+  }) async {
+    final normalizedDescription = description.trim();
+    if (issueType.trim().isEmpty || normalizedDescription.isEmpty) {
+      throw ArgumentError('A category and description are required.');
+    }
+
+    await _firestore.runTransaction((transaction) async {
+      final reference = _requests.doc(requestId);
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists) throw StateError('This request no longer exists.');
+
+      final request = RequestModel.fromMap(snapshot.data()!, id: snapshot.id);
+      if (request.reportedBy != reportedBy) {
+        throw StateError('You can only edit your own requests.');
+      }
+      if (request.status != 'pending') {
+        throw StateError('Only pending requests can be edited.');
+      }
+
+      transaction.update(reference, {
+        'issueType': issueType.trim(),
+        'description': normalizedDescription,
+      });
+    });
+  }
+
+  Future<void> deleteStudentRequest({
+    required String requestId,
+    required String reportedBy,
+  }) async {
+    await _firestore.runTransaction((transaction) async {
+      final reference = _requests.doc(requestId);
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists) throw StateError('This request no longer exists.');
+
+      final request = RequestModel.fromMap(snapshot.data()!, id: snapshot.id);
+      if (request.reportedBy != reportedBy) {
+        throw StateError('You can only delete your own requests.');
+      }
+
+      transaction.delete(reference);
+    });
+  }
+
   Future<void> acceptRequest(String requestId, String staffUid) async {
     await _firestore.runTransaction((transaction) async {
       final reference = _requests.doc(requestId);
@@ -175,6 +269,7 @@ class RequestService {
     final updates = <String, Object?>{
       'status': status,
       'assignedTo': assignedTo,
+      'isAdminAssigned': assignedTo != null && assignedTo.isNotEmpty,
     };
     if (status == 'in_progress') {
       updates['acceptedAt'] = FieldValue.serverTimestamp();

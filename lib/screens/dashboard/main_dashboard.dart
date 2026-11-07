@@ -7,11 +7,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../app/app_routes.dart';
 import '../../models/request_model.dart';
-import '../../widgets/request_card.dart';
-import '../maps/floor_map_screen.dart';
+import '../../widgets/request_thumbnail.dart';
+import '../../widgets/custom_bottom_nav.dart';
 import '../shared/notifications_screen.dart';
 import '../student/request_details_screen.dart';
-import '../student/my_requests_screen.dart';
 
 class MainDashboard extends StatefulWidget {
   const MainDashboard({super.key});
@@ -64,17 +63,11 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   void openRequests() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MyRequestsScreen()),
-    );
+    Navigator.pushNamed(context, AppRoutes.myRequests);
   }
 
   void openRequestForm() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const FloorMapScreen()),
-    );
+    Navigator.pushNamed(context, AppRoutes.map);
   }
 
   @override
@@ -89,7 +82,13 @@ class _MainDashboardState extends State<MainDashboard> {
         backgroundColor: const Color(0xFF242735),
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Clean Connect', style: TextStyle(fontSize: 17)),
+        centerTitle: true,
+        title: Image.asset(
+          'assets/auth/broom.png',
+          width: 52,
+          height: 40,
+          fit: BoxFit.contain,
+        ),
         actions: [
           IconButton(
             tooltip: 'Request updates',
@@ -103,202 +102,225 @@ class _MainDashboardState extends State<MainDashboard> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 23,
-                    backgroundColor: Color(0xFFE8E8E8),
-                    child: Icon(Icons.person, color: Colors.black54, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello, $userName',
-                          style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF292D3C),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        const Text(
-                          'Help keep your campus fresh and welcoming.',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0EBFF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 21),
-                    const SizedBox(height: 7),
-                    const Text(
-                      'See something that needs care?',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF292D3C),
+                    const CircleAvatar(
+                      radius: 23,
+                      backgroundColor: Color(0xFFE8E8E8),
+                      child: Icon(
+                        Icons.person,
+                        color: Colors.black54,
+                        size: 28,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'Send a quick campus clean-up request.',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                    const SizedBox(height: 9),
-                    SizedBox(
-                      height: 32,
-                      child: ElevatedButton.icon(
-                        onPressed: openRequestForm,
-                        icon: const Icon(Icons.add, size: 19),
-                        label: const Text(
-                          'New request',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3478F6),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                        ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hello, $userName',
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF292D3C),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Help keep your campus fresh and welcoming.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 14),
-              if (user != null) _StudentRequestStats(uid: user.uid),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Recent Requests',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC3E8DC),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  TextButton(
-                    onPressed: openRequests,
-                    child: const Text(
-                      'View All  ❯',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF3478F6)),
-                    ),
-                  ),
-                ],
-              ),
-              if (user == null)
-                const Text('Please log in to view your requests.')
-              else
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('requests')
-                      .where('reportedBy', isEqualTo: user.uid)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return const Text('Unable to load requests.');
-                    }
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    List<QueryDocumentSnapshot> docs =
-                        snapshot.data?.docs ?? [];
-
-                    docs.sort((a, b) {
-                      Map<String, dynamic> first =
-                          a.data() as Map<String, dynamic>;
-                      Map<String, dynamic> second =
-                          b.data() as Map<String, dynamic>;
-
-                      int dateA = first['createdAt'] is Timestamp
-                          ? (first['createdAt'] as Timestamp)
-                                .millisecondsSinceEpoch
-                          : 0;
-
-                      int dateB = second['createdAt'] is Timestamp
-                          ? (second['createdAt'] as Timestamp)
-                                .millisecondsSinceEpoch
-                          : 0;
-
-                      return dateB.compareTo(dateA);
-                    });
-
-                    if (docs.isEmpty) {
-                      return const Text(
-                        'You have no cleaning requests yet.',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      );
-                    }
-
-                    return Column(
-                      children: docs.take(2).map((doc) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 9),
-                          child: RequestCard(
-                            request: RequestModel.fromMap(
-                              doc.data() as Map<String, dynamic>,
-                              id: doc.id,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF40434A),
+                          ),
+                          children: const [
+                            TextSpan(text: 'See something that '),
+                            TextSpan(
+                              text: 'needs care?',
+                              style: TextStyle(color: Color(0xFF299D50)),
                             ),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => RequestDetailsScreen(
-                                  request: RequestModel.fromMap(
-                                    doc.data() as Map<String, dynamic>,
-                                    id: doc.id,
-                                  ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Send a quick campus clean-up request.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 30,
+                        child: ElevatedButton.icon(
+                          onPressed: openRequestForm,
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('New request'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF399849),
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(fontSize: 11),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            shape: const StadiumBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (user != null)
+                  _StudentRequestStats(uid: user.uid, onViewAll: openRequests),
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, top: 2, bottom: 1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Requests',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: openRequests,
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'View All  ›',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF1458D3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (user == null)
+                  const Text('Please log in to view your requests.')
+                else
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('requests')
+                        .where('reportedBy', isEqualTo: user.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return const Text('Unable to load requests.');
+                      }
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      List<QueryDocumentSnapshot> docs =
+                          snapshot.data?.docs ?? [];
+
+                      docs.sort((a, b) {
+                        Map<String, dynamic> first =
+                            a.data() as Map<String, dynamic>;
+                        Map<String, dynamic> second =
+                            b.data() as Map<String, dynamic>;
+
+                        int dateA = first['createdAt'] is Timestamp
+                            ? (first['createdAt'] as Timestamp)
+                                  .millisecondsSinceEpoch
+                            : 0;
+
+                        int dateB = second['createdAt'] is Timestamp
+                            ? (second['createdAt'] as Timestamp)
+                                  .millisecondsSinceEpoch
+                            : 0;
+
+                        return dateB.compareTo(dateA);
+                      });
+
+                      if (docs.isEmpty) {
+                        return const Text(
+                          'You have no cleaning requests yet.',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        );
+                      }
+
+                      return Column(
+                        children: docs.take(3).map((doc) {
+                          final request = RequestModel.fromMap(
+                            doc.data() as Map<String, dynamic>,
+                            id: doc.id,
+                          );
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _DashboardRequestCard(
+                              request: request,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      RequestDetailsScreen(request: request),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
-            ],
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
         ),
       ),
       bottomNavigationBar: CustomBottomNav(
         selectedIndex: 0,
-        onTap: (index) {
-          if (index == 1) {
-            openRequests();
-          } else if (index == 2) {
-            Navigator.pushNamed(context, AppRoutes.map);
-          } else if (index == 3) {
-            Navigator.pushNamed(context, AppRoutes.profile);
-          }
-        },
+        selectedColor: const Color(0xFF399849),
       ),
     );
   }
 }
 
 class _StudentRequestStats extends StatelessWidget {
-  const _StudentRequestStats({required this.uid});
+  const _StudentRequestStats({required this.uid, required this.onViewAll});
 
   final String uid;
+  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -314,35 +336,87 @@ class _StudentRequestStats extends StatelessWidget {
         if (!snapshot.hasData) {
           return const LinearProgressIndicator();
         }
-        final docs = snapshot.data!.docs;
-        final pending = docs.where((doc) {
+        final today = DateTime.now();
+        final todayDocs = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['status'] == 'pending';
-        }).length;
-        final completed = docs.where((doc) {
+          final timestamp = data['createdAt'];
+          if (timestamp is! Timestamp) return false;
+          final date = timestamp.toDate();
+          return date.year == today.year &&
+              date.month == today.month &&
+              date.day == today.day;
+        });
+        final todayRequests = todayDocs.toList();
+        int countStatus(Set<String> statuses) => todayRequests.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['status'] == 'completed';
+          return statuses.contains(
+            (data['status'] as String? ?? '').toLowerCase().replaceAll(
+              ' ',
+              '_',
+            ),
+          );
         }).length;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: _StudentStatCard(
-                  label: 'Total requests',
-                  value: docs.length,
-                ),
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 2, bottom: 3),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Requests Update Today',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  TextButton(
+                    onPressed: onViewAll,
+                    style: TextButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: EdgeInsets.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'View All  ›',
+                      style: TextStyle(fontSize: 10, color: Color(0xFF1458D3)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _StudentStatCard(label: 'Pending', value: pending),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _StudentStatCard(
+                      label: 'Pending Request',
+                      value: countStatus({'pending'}),
+                      color: const Color(0xFFE99735),
+                      caption: 'for today',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StudentStatCard(
+                      label: 'On Progress',
+                      value: countStatus({'in_progress', 'accepted'}),
+                      color: const Color(0xFF6FA4D9),
+                      caption: 'for today',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StudentStatCard(
+                      label: 'Finished Request',
+                      value: countStatus({'completed'}),
+                      color: const Color(0xFFEE857F),
+                      caption: 'for today',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _StudentStatCard(label: 'Completed', value: completed),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -350,29 +424,200 @@ class _StudentRequestStats extends StatelessWidget {
 }
 
 class _StudentStatCard extends StatelessWidget {
-  const _StudentStatCard({required this.label, required this.value});
+  const _StudentStatCard({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.caption,
+  });
 
   final String label;
   final int value;
+  final Color color;
+  final String caption;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(10),
+    height: 112,
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
     decoration: BoxDecoration(
-      color: const Color(0xFFF3F5F7),
-      borderRadius: BorderRadius.circular(10),
+      color: Colors.white,
+      border: Border.all(color: const Color(0xFF399849), width: 1.2),
+      borderRadius: BorderRadius.circular(17),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x40000000),
+          blurRadius: 3,
+          offset: Offset(0, 2),
+        ),
+      ],
     ),
     child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Container(
+          width: 58,
+          height: 58,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            value.toString().padLeft(2, '0'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 29,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 5),
         Text(
           label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 10),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: color,
+            fontSize: 9,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          caption,
+          style: const TextStyle(fontSize: 9, color: Color(0xFF777777)),
         ),
       ],
     ),
   );
+}
+
+class _DashboardRequestCard extends StatelessWidget {
+  const _DashboardRequestCard({required this.request, required this.onTap});
+
+  final RequestModel request;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = request.status.toLowerCase();
+    final statusLabel = status.replaceAll('_', ' ');
+    final Color statusColor;
+    switch (status) {
+      case 'pending':
+        statusColor = const Color(0xFFE8B35D);
+      case 'in_progress':
+      case 'accepted':
+        statusColor = const Color(0xFFDAB86E);
+      case 'completed':
+        statusColor = const Color(0xFFDF7D72);
+      default:
+        statusColor = const Color(0xFFDF7D72);
+    }
+
+    return Material(
+      color: const Color(0xFFC3E8DC),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              RequestThumbnail(request: request),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF299D50),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${request.facilityId} ${request.issueType}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Color(0xFF6A7073),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 12,
+                          color: Color(0xFF36404A),
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            'Floor ${request.floor ?? '?'} | ${request.facilityId}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF6A7073),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Column(
+                children: [
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: Color(0xFF252A2D),
+                  ),
+                  const SizedBox(height: 13),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 50),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF5F4A33),
+                        fontSize: 8,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class CleaningRequestCard extends StatelessWidget {
@@ -471,66 +716,6 @@ class CleaningRequestCard extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class CustomBottomNav extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onTap;
-
-  const CustomBottomNav({
-    super.key,
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    List<IconData> icons = [
-      Icons.home_outlined,
-      Icons.fact_check_outlined,
-      Icons.map_outlined,
-      Icons.person_outline,
-    ];
-
-    List<String> labels = ['Home', 'Requests', 'Map', 'Profile'];
-
-    return Container(
-      color: const Color(0xFFE0E0E0),
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: List.generate(icons.length, (index) {
-            bool selected = index == selectedIndex;
-
-            return Expanded(
-              child: InkWell(
-                onTap: () => onTap(index),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 45,
-                      height: 27,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? const Color(0xFF83D9B3)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(icons[index], size: 19),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(labels[index], style: const TextStyle(fontSize: 10)),
-                  ],
-                ),
-              ),
-            );
-          }),
         ),
       ),
     );

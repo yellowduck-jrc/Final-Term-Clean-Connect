@@ -1,58 +1,79 @@
 import 'package:flutter/material.dart';
 
 class AppNavigationObserver extends NavigatorObserver {
-  final List<Route<dynamic>> _pageRoutes = [];
+  static const requestsRoute = '/requests';
+  static const mapRoute = '/map';
+  static const profileRoute = '/profile';
+  static const studentRoute = '/student';
+  static const staffDashboardRoute = '/staff';
+  static const staffRequestsRoute = '/staff/available';
+
   final ValueNotifier<int> revision = ValueNotifier(0);
 
-  Route<dynamic>? get _activePageRoute =>
-      _pageRoutes.isEmpty ? null : _pageRoutes.last;
+  bool shouldShowBackButton(Route<dynamic>? route, bool canPop) {
+    if (route?.isCurrent != true || !canPop) return false;
+    return !{
+      studentRoute,
+      requestsRoute,
+      mapRoute,
+      profileRoute,
+      staffDashboardRoute,
+      staffRequestsRoute,
+    }.contains(route?.settings.name);
+  }
 
-  bool shouldShowBackButton(Route<dynamic>? route) =>
-      route != null && route == _activePageRoute && _pageRoutes.length > 1;
+  int selectedTabFor(Route<dynamic>? route, int fallback) {
+    if (route?.isCurrent != true) return fallback;
+    return switch (route?.settings.name) {
+      requestsRoute => 1,
+      mapRoute => 2,
+      profileRoute => 3,
+      staffDashboardRoute => 0,
+      staffRequestsRoute => 1,
+      _ => fallback,
+    };
+  }
+
+  void navigateToTab(BuildContext context, int index) {
+    final navigator = Navigator.of(context);
+    if (index == 0) {
+      navigator.popUntil((route) => route.isFirst);
+      return;
+    }
+
+    final targetName = switch (index) {
+      1 => requestsRoute,
+      2 => mapRoute,
+      3 => profileRoute,
+      _ => null,
+    };
+    if (targetName == null) return;
+
+    if (ModalRoute.of(context)?.settings.name == targetName) return;
+    navigator.pushNamedAndRemoveUntil(targetName, (route) => route.isFirst);
+  }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    if (route is! PageRoute<dynamic>) return;
-
-    _pageRoutes.remove(route);
-    _pageRoutes.add(route);
     _notifyChanged();
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    if (route is! PageRoute<dynamic>) return;
-
-    _pageRoutes.remove(route);
     _notifyChanged();
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    if (oldRoute is PageRoute<dynamic>) {
-      final index = _pageRoutes.indexOf(oldRoute);
-      if (index >= 0) {
-        _pageRoutes.removeAt(index);
-        if (newRoute is PageRoute<dynamic>) {
-          _pageRoutes.insert(index, newRoute);
-        }
-      }
-    } else if (newRoute is PageRoute<dynamic>) {
-      _pageRoutes.add(newRoute);
-    }
-
     _notifyChanged();
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didRemove(route, previousRoute);
-    if (route is! PageRoute<dynamic>) return;
-
-    _pageRoutes.remove(route);
     _notifyChanged();
   }
 
@@ -68,11 +89,12 @@ class NavigationBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final route = ModalRoute.of(context);
     final observer = appNavigationObserver;
+    final navigator = Navigator.of(context);
 
     return ValueListenableBuilder<int>(
       valueListenable: observer.revision,
       builder: (context, _, _) {
-        if (!observer.shouldShowBackButton(route)) {
+        if (!observer.shouldShowBackButton(route, navigator.canPop())) {
           return const SizedBox.shrink();
         }
 

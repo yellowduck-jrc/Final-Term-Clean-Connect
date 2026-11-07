@@ -5,6 +5,7 @@ import '../../models/app_user_model.dart';
 import '../../models/request_model.dart';
 import '../../services/request_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/staff_bottom_nav.dart';
 import 'accept_request_dialog.dart';
 import 'staff_request_details_screen.dart';
 
@@ -51,6 +52,7 @@ class _AvailableRequestsScreenState extends State<AvailableRequestsScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: const StaffBottomNav(selectedIndex: 1),
       body: StreamBuilder<List<RequestModel>>(
         stream: RequestService().watchAllRequests(),
         builder: (context, requestsSnapshot) {

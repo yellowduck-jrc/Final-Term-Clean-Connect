@@ -15,10 +15,26 @@ class ManageUsersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final users = UserService();
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Manage Users'),
         leading: const NavigationBackButton(),
         automaticallyImplyLeading: false,
+        backgroundColor: const Color(0xFF242735),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Manage Users',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.notifications),
+            icon: const Icon(Icons.notifications_none),
+          ),
+        ],
       ),
       body: StreamBuilder<List<AppUserModel>>(
         stream: users.watchUsers(),
@@ -35,32 +51,64 @@ class ManageUsersScreen extends StatelessWidget {
             return const Center(child: Text('No user accounts found.'));
           }
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
             itemCount: snapshot.data!.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 9),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final user = snapshot.data![index];
               return Material(
                 color: const Color(0xFFD9D9D9),
-                borderRadius: BorderRadius.circular(10),
-                child: ListTile(
-                  leading: const _UserAvatar(),
-                  title: Text(
-                    user.fullName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(user.email),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.chevron_right, size: 20),
-                      _RolePill(role: user.role),
-                    ],
-                  ),
+                borderRadius: BorderRadius.circular(9),
+                child: InkWell(
+                  mouseCursor: SystemMouseCursors.click,
+                  borderRadius: BorderRadius.circular(9),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
                       builder: (_) => _UserProfileScreen(user: user),
+                    ),
+                  ),
+                  child: SizedBox(
+                    height: 57,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 14),
+                        const _UserListAvatar(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.fullName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                user.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Icon(Icons.chevron_right, size: 18),
+                            _RolePill(role: user.role),
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                     ),
                   ),
                 ),
@@ -72,6 +120,17 @@ class ManageUsersScreen extends StatelessWidget {
       bottomNavigationBar: const AdminBottomNavigationBar(selectedIndex: 2),
     );
   }
+}
+
+class _UserListAvatar extends StatelessWidget {
+  const _UserListAvatar();
+
+  @override
+  Widget build(BuildContext context) => const CircleAvatar(
+    radius: 16,
+    backgroundColor: Color(0xFF399849),
+    child: Icon(Icons.person, color: Color(0xFFD9D9D9), size: 22),
+  );
 }
 
 class _UserAvatar extends StatelessWidget {
