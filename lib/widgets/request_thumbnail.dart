@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../models/request_model.dart';
@@ -46,23 +48,45 @@ class RequestThumbnail extends StatelessWidget {
     );
 
     final imageUrl = request.imageUrl;
+    final imageData = imageUrl == null
+        ? null
+        : imageUrl.startsWith('data:')
+        ? imageUrl.substring(imageUrl.indexOf(',') + 1)
+        : imageUrl;
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: SizedBox(
         width: width,
         height: height,
-        child: imageUrl == null || imageUrl.isEmpty
+        child: imageData == null || imageData.isEmpty
             ? categoryIcon()
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => categoryIcon(),
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return categoryIcon();
-                },
-              ),
+            : _requestImage(imageUrl!, imageData, categoryIcon),
       ),
     );
+  }
+
+  Widget _requestImage(
+    String source,
+    String imageData,
+    Widget Function() categoryIcon,
+  ) {
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => categoryIcon(),
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : categoryIcon(),
+      );
+    }
+    try {
+      return Image.memory(
+        base64Decode(imageData),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => categoryIcon(),
+      );
+    } on FormatException {
+      return categoryIcon();
+    }
   }
 }

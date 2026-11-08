@@ -17,6 +17,7 @@ import '../screens/maps/floor_map_screen.dart';
 import '../screens/shared/notifications_screen.dart';
 import '../screens/shared/profile_screen.dart';
 import '../screens/staff/assigned_requests_screen.dart';
+import '../screens/staff/assigned_tasks_screen.dart';
 import '../screens/staff/available_requests_screen.dart';
 import '../screens/staff/staff_dashboard.dart';
 import '../screens/staff/staff_request_details_screen.dart';
@@ -36,6 +37,7 @@ class AppRoutes {
   static const myRequests = AppNavigationObserver.requestsRoute;
   static const availableRequests = AppNavigationObserver.staffRequestsRoute;
   static const assignedRequests = '/staff/assigned';
+  static const assignedTasks = '/staff/tasks';
   static const manageUsers = '/admin/users';
   static const manageRequests = '/admin/requests';
   static const manageFacilities = '/admin/facilities';
@@ -59,6 +61,8 @@ class AppRoutes {
         const _RoleOnlyRoute(role: 'staff', child: AvailableRequestsScreen()),
     assignedRequests: (_) =>
         const _RoleOnlyRoute(role: 'staff', child: AssignedRequestsScreen()),
+    assignedTasks: (_) =>
+        const _RoleOnlyRoute(role: 'staff', child: AssignedTasksScreen()),
     manageUsers: (_) =>
         const _RoleOnlyRoute(role: 'admin', child: ManageUsersScreen()),
     manageRequests: (_) =>

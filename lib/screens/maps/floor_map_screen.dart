@@ -121,7 +121,7 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
         }
         return switch (snapshot.data?.role) {
           'admin' => const AdminBottomNavigationBar(selectedIndex: 2),
-          'staff' => const StaffBottomNav(selectedIndex: 2),
+          'staff' => const StaffBottomNav(selectedIndex: -1),
           _ => const CustomBottomNav(selectedIndex: 2),
         };
       },

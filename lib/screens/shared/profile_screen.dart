@@ -73,20 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           builder: (context, snapshot) {
             final isStaff = snapshot.data?.role == 'staff';
             return AppBar(
-              leading: isStaff
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const NavigationBackButton(),
-                        IconButton(
-                          tooltip: 'Sign out',
-                          onPressed: () => _signOut(context),
-                          icon: const Icon(Icons.logout, size: 19),
-                        ),
-                      ],
-                    )
-                  : const NavigationBackButton(),
-              leadingWidth: isStaff ? 96 : null,
+              leading: const NavigationBackButton(),
               automaticallyImplyLeading: false,
               backgroundColor: _headerColor,
               foregroundColor: Colors.white,
@@ -198,30 +185,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             label: 'Full Name:',
                             value: fullName,
                             compact: true,
-                          ),
-                          const _PersonalInfoRow(
-                            icon: Icons.calendar_month,
-                            label: 'Date of Birth:',
-                            value: 'Not provided',
-                            compact: true,
+                            fontSizeIncrease: 2.5,
                           ),
                           _PersonalInfoRow(
                             icon: Icons.email,
                             label: 'Email:',
                             value: email,
                             compact: true,
-                          ),
-                          const _PersonalInfoRow(
-                            icon: Icons.phone,
-                            label: 'Contact:',
-                            value: 'Not provided',
-                            compact: true,
-                          ),
-                          const _PersonalInfoRow(
-                            icon: Icons.location_on,
-                            label: 'Address:',
-                            value: 'Not provided',
-                            compact: true,
+                            fontSizeIncrease: 2.5,
                           ),
                         ] else ...[
                           _PersonalInfoRow(
@@ -236,15 +207,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                         const SizedBox(height: 18),
-                        if (!isStaff)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: () => _signOut(context),
-                              icon: const Icon(Icons.logout, size: 16),
-                              label: const Text('Sign out'),
-                            ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => _signOut(context),
+                            icon: const Icon(Icons.logout, size: 16),
+                            label: const Text('Sign out'),
                           ),
+                        ),
                       ],
                     );
                   },
@@ -751,12 +721,14 @@ class _PersonalInfoRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.compact = false,
+    this.fontSizeIncrease = 0,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final bool compact;
+  final double fontSizeIncrease;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -776,7 +748,7 @@ class _PersonalInfoRow extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: compact ? 10 : 12,
+              fontSize: (compact ? 10 : 12) + fontSizeIncrease,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -786,7 +758,9 @@ class _PersonalInfoRow extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: compact ? 10 : 12),
+            style: TextStyle(
+              fontSize: (compact ? 10 : 12) + fontSizeIncrease,
+            ),
           ),
         ),
       ],

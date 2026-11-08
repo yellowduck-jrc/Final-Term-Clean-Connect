@@ -69,7 +69,8 @@ class _StaffDashboardContent extends StatelessWidget {
         .where(
           (request) =>
               request.reportedBy.trim().isNotEmpty &&
-              request.status != 'cancelled',
+              request.status == 'pending' &&
+              (request.assignedTo == null || request.assignedTo!.isEmpty),
         )
         .take(3)
         .toList();
@@ -218,6 +219,53 @@ class _StaffDashboardContent extends StatelessWidget {
                     children: [
                       const Expanded(
                         child: Text(
+                          'Pending Tasks',
+                          style: TextStyle(
+                            color: Color(0xFF292D3C),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.availableRequests,
+                        ),
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'View All  ›',
+                          style: TextStyle(
+                            color: Color(0xFF3977FF),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  _PendingTasksBanner(
+                    count: requests
+                        .where(
+                          (request) =>
+                              request.status == 'in_progress' &&
+                              request.assignedTo == uid,
+                        )
+                        .length,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.assignedTasks,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
                           'Recent Requests',
                           style: TextStyle(
                             color: Color(0xFF292D3C),
@@ -348,6 +396,63 @@ class _CampusCleanlinessCard extends StatelessWidget {
           ],
         ),
       ],
+    ),
+  );
+}
+
+class _PendingTasksBanner extends StatelessWidget {
+  const _PendingTasksBanner({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: const Color(0xFF399849),
+    borderRadius: BorderRadius.circular(9),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        child: Row(
+          children: [
+            Text(
+              count.toString().padLeft(2, '0'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                height: 1,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 9),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pending Tasks Today',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'Let’s get them done and keep our campus clean and organized.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white70, fontSize: 8),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white, size: 19),
+          ],
+        ),
+      ),
     ),
   );
 }

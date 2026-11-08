@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../app/navigation_observer.dart';
 import '../../app/app_routes.dart';
@@ -41,7 +41,6 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   bool isSubmitting = false;
   bool isPickingPhoto = false;
   Uint8List? selectedPhotoBytes;
-  String? selectedPhotoExtension;
 
   final Color navy = const Color(0xFF242735);
   final Color green = const Color(0xFF20A879);
@@ -101,7 +100,6 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
         issueType: issueType,
         description: descriptionController.text,
         imageBytes: selectedPhotoBytes,
-        imageExtension: selectedPhotoExtension ?? 'jpg',
       );
 
       if (!mounted) return;
@@ -116,7 +114,6 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
 
       setState(() {
         selectedPhotoBytes = null;
-        selectedPhotoExtension = null;
         selectedFacilityId = null;
         selectedRoomName = null;
         selectedFloor = null;
@@ -146,14 +143,18 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   Future<void> pickPhoto() async {
     setState(() => isPickingPhoto = true);
     try {
-      final file = await FilePicker.pickFile(type: FileType.image);
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+        maxWidth: 1280,
+        maxHeight: 1280,
+      );
       if (!mounted || file == null) return;
 
       final bytes = await file.readAsBytes();
       if (!mounted) return;
       setState(() {
         selectedPhotoBytes = bytes;
-        selectedPhotoExtension = file.extension;
       });
     } catch (error) {
       if (mounted) showMessage('Unable to select a photo: $error');

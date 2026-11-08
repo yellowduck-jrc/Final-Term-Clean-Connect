@@ -11,8 +11,8 @@ class StaffBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     const destinations = [
       (icon: Icons.home_outlined, label: 'Home'),
+      (icon: Icons.cleaning_services_outlined, label: 'Tasks'),
       (icon: Icons.assignment_outlined, label: 'Requests'),
-      (icon: Icons.map_outlined, label: 'Map'),
       (icon: Icons.person_outline, label: 'Profile'),
     ];
 
@@ -74,8 +74,8 @@ class StaffBottomNav extends StatelessWidget {
     }
 
     final targetRoute = switch (index) {
-      1 => AppRoutes.availableRequests,
-      2 => AppRoutes.map,
+      1 => AppRoutes.assignedTasks,
+      2 => AppRoutes.availableRequests,
       3 => AppRoutes.profile,
       _ => null,
     };

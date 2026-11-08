@@ -52,7 +52,7 @@ class _AvailableRequestsScreenState extends State<AvailableRequestsScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const StaffBottomNav(selectedIndex: 1),
+      bottomNavigationBar: const StaffBottomNav(selectedIndex: 2),
       body: StreamBuilder<List<RequestModel>>(
         stream: RequestService().watchAllRequests(),
         builder: (context, requestsSnapshot) {

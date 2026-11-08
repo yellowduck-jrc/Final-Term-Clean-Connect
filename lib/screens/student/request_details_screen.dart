@@ -110,7 +110,7 @@ class _RequestDetailsContent extends StatelessWidget {
                 request.issueType,
                 style: const TextStyle(
                   color: _detailGreen,
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -157,8 +157,12 @@ class _RequestDetailsContent extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 9),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(5),
+              Container(
+                padding: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _detailGreen),
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: RequestThumbnail(
                   request: request,
                   width: double.infinity,
