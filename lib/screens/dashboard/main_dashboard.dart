@@ -203,7 +203,7 @@ class _MainDashboardState extends State<MainDashboard> {
                 ),
                 const SizedBox(height: 10),
                 if (user != null)
-                  _StudentRequestStats(uid: user.uid, onViewAll: openRequests),
+                  _StudentRequestStats(uid: user.uid),
                 Padding(
                   padding: const EdgeInsets.only(left: 2, top: 2, bottom: 1),
                   child: Row(
@@ -317,10 +317,9 @@ class _MainDashboardState extends State<MainDashboard> {
 }
 
 class _StudentRequestStats extends StatelessWidget {
-  const _StudentRequestStats({required this.uid, required this.onViewAll});
+  const _StudentRequestStats({required this.uid});
 
   final String uid;
-  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -367,18 +366,6 @@ class _StudentRequestStats extends StatelessWidget {
                   const Text(
                     'Requests Update Today',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                  ),
-                  TextButton(
-                    onPressed: onViewAll,
-                    style: TextButton.styleFrom(
-                      minimumSize: Size.zero,
-                      padding: EdgeInsets.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'View All  ›',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF1458D3)),
-                    ),
                   ),
                 ],
               ),

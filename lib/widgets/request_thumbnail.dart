@@ -47,29 +47,23 @@ class RequestThumbnail extends StatelessWidget {
       child: Center(child: Icon(icon, size: 31, color: iconColor)),
     );
 
-    final imageUrl = request.imageUrl;
-    final imageData = imageUrl == null
-        ? null
-        : imageUrl.startsWith('data:')
-        ? imageUrl.substring(imageUrl.indexOf(',') + 1)
-        : imageUrl;
+    final photoBase64 = request.photoBase64?.trim();
+    final imageUrl = request.imageUrl?.trim();
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: SizedBox(
         width: width,
         height: height,
-        child: imageData == null || imageData.isEmpty
+        child: photoBase64 != null && photoBase64.isNotEmpty
+            ? _base64Image(photoBase64, categoryIcon)
+            : imageUrl == null || imageUrl.isEmpty
             ? categoryIcon()
-            : _requestImage(imageUrl!, imageData, categoryIcon),
+            : _requestImage(imageUrl, categoryIcon),
       ),
     );
   }
 
-  Widget _requestImage(
-    String source,
-    String imageData,
-    Widget Function() categoryIcon,
-  ) {
+  Widget _requestImage(String source, Widget Function() categoryIcon) {
     if (source.startsWith('http://') || source.startsWith('https://')) {
       return Image.network(
         source,
@@ -79,6 +73,13 @@ class RequestThumbnail extends StatelessWidget {
             progress == null ? child : categoryIcon(),
       );
     }
+    return _base64Image(source, categoryIcon);
+  }
+
+  Widget _base64Image(String encoded, Widget Function() categoryIcon) {
+    final imageData = encoded.startsWith('data:')
+        ? encoded.substring(encoded.indexOf(',') + 1)
+        : encoded;
     try {
       return Image.memory(
         base64Decode(imageData),

@@ -7,6 +7,8 @@ import '../models/request_model.dart';
 import 'facility_service.dart';
 
 class RequestService {
+  static const maxPhotoBytes = 650 * 1024;
+
   RequestService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -33,6 +35,11 @@ class RequestService {
         'A reporter, facility, valid floor, issue type, and description are required.',
       );
     }
+    if (imageBytes != null && imageBytes.length > maxPhotoBytes) {
+      throw ArgumentError(
+        'The photo is too large for Firestore. Choose a smaller photo.',
+      );
+    }
 
     final facility = await FacilityService(firestore: _firestore)
         .getFacility(facilityId.trim());
@@ -43,8 +50,6 @@ class RequestService {
     }
 
     final doc = _requests.doc();
-    final imageUrl = imageBytes == null ? null : base64Encode(imageBytes);
-
     await doc.set({
       'reportedBy': reportedBy.trim(),
       'facilityId': facilityId.trim(),
@@ -57,7 +62,8 @@ class RequestService {
       'createdAt': FieldValue.serverTimestamp(),
       'acceptedAt': null,
       'completedAt': null,
-      'imageUrl': imageUrl,
+      'imageUrl': null,
+      'photoBase64': imageBytes == null ? null : base64Encode(imageBytes),
     });
     return doc.id;
   }
@@ -137,6 +143,13 @@ class RequestService {
     final doc = await _requests.doc(id).get();
     if (!doc.exists) return null;
     return RequestModel.fromMap(doc.data()!, id: doc.id);
+  }
+
+  Future<void> deleteRequest(String requestId) {
+    if (requestId.trim().isEmpty) {
+      throw ArgumentError.value(requestId, 'requestId', 'Cannot be empty.');
+    }
+    return _requests.doc(requestId).delete();
   }
 
   Future<void> updateStudentRequest({

@@ -137,13 +137,10 @@ class _UserAvatar extends StatelessWidget {
   const _UserAvatar();
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 52,
-    height: 44,
-    decoration: BoxDecoration(
-      color: const Color(0xFF70A6D4),
-      borderRadius: BorderRadius.circular(12),
-    ),
+  Widget build(BuildContext context) => const CircleAvatar(
+    radius: 25,
+    backgroundColor: Color(0xFF36984D),
+    child: Icon(Icons.person, color: Color(0xFFD9D9D9), size: 34),
   );
 }
 
@@ -196,9 +193,21 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
     final user = widget.user;
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF242735),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
         leading: const NavigationBackButton(),
         automaticallyImplyLeading: false,
-        title: const Text('User Profile'),
+        title: const Text('Manage Users'),
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.notifications),
+            icon: const Icon(Icons.notifications_none),
+          ),
+        ],
       ),
       body: StreamBuilder<List<RequestModel>>(
         stream: RequestService().watchRequestsForUser(user.uid),
@@ -237,14 +246,18 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
               .take(3)
               .toList();
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
+            child: ListView(
+            padding: const EdgeInsets.fromLTRB(15, 16, 15, 20),
             children: [
               _UserPanel(
                 child: Row(
                   children: [
                     const _UserAvatar(),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,33 +266,34 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                             user.fullName,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              fontSize: 16,
+                              fontSize: 17,
                             ),
                           ),
                           Text(
                             user.email,
-                            style: const TextStyle(fontSize: 11),
+                            style: const TextStyle(fontSize: 12),
                           ),
-                          const SizedBox(height: 4),
-                          _RolePill(role: user.role),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    _RolePill(role: user.role),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               _UserPanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      const Padding(
+                      padding: EdgeInsets.fromLTRB(4, 0, 4, 8),
                       child: Text(
                         'User Activity',
                         style: TextStyle(
+                          color: Color(0xFF2FA455),
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: 17,
                         ),
                       ),
                     ),
@@ -289,15 +303,15 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                           child: _ActivityMetric(
                             value: '${activity.length}',
                             label: isStaff
-                                ? 'Requests Assigned\nto user'
-                                : 'Requests Submitted\nby user',
+                                ? 'Requests Assigned'
+                                : 'Requests Made',
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: _ActivityMetric(
                             value: '${completed.length}',
-                            label: 'Requests Completed',
+                            label: 'Completed Requests',
                           ),
                         ),
                       ],
@@ -308,7 +322,7 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                         Expanded(
                           child: _ActivityMetric(
                             value: '$cancelled',
-                            label: 'Requests Cancelled',
+                            label: 'Cancelled Requests',
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -318,9 +332,7 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                               completed,
                               isStaff: isStaff,
                             ),
-                            label: isStaff
-                                ? 'Average staff time\nto complete a request'
-                                : 'Average time\nto resolve a request',
+                            label: 'Avg. completion time',
                           ),
                         ),
                       ],
@@ -338,8 +350,9 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                       child: Text(
                         'Recent Requests',
                         style: TextStyle(
+                          color: Color(0xFF2FA455),
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: 17,
                         ),
                       ),
                     ),
@@ -358,7 +371,7 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               _UserPanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,8 +381,9 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                       child: Text(
                         'Change User Type',
                         style: TextStyle(
+                          color: Color(0xFF2FA455),
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: 17,
                         ),
                       ),
                     ),
@@ -378,57 +392,46 @@ class _UserProfileScreenState extends State<_UserProfileScreen> {
                         for (final role in const ['student', 'staff', 'admin'])
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 3,
-                              ),
-                              child: ChoiceChip(
-                                label: Text(
-                                  '${role[0].toUpperCase()}${role.substring(1)}',
-                                ),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: _RoleOption(
+                                label: '${role[0].toUpperCase()}${role.substring(1)}',
                                 selected: _role == role,
-                                showCheckmark: false,
-                                onSelected: (_) => setState(() => _role = role),
-                                backgroundColor: Colors.white,
-                                selectedColor: const Color(0xFFFFEBC8),
+                                onTap: () => setState(() => _role = role),
                               ),
                             ),
                           ),
                       ],
                     ),
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      title: const Text('Active account'),
-                      value: _isActive,
-                      onChanged: (value) => setState(() => _isActive = value),
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _isSaving
-                            ? null
-                            : () => _saveChanges(context),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF69CFA4),
-                        ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Save Changes'),
-                      ),
-                    ),
                   ],
                 ),
               ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 42,
+                child: FilledButton(
+                  onPressed: _isSaving ? null : () => _saveChanges(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF36984D),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Save Changes'),
+                ),
+              ),
             ],
+            ),
           );
         },
       ),
-      bottomNavigationBar: const AdminBottomNavigationBar(selectedIndex: 2),
+      bottomNavigationBar: const AdminBottomNavigationBar(selectedIndex: 3),
     );
   }
 
@@ -478,26 +481,70 @@ class _ActivityMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 76,
-    padding: const EdgeInsets.all(8),
+    height: 50,
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
     decoration: BoxDecoration(
-      color: const Color(0xFFB0B0B0),
-      borderRadius: BorderRadius.circular(9),
+      color: const Color(0xFFB0CBB5),
+      borderRadius: BorderRadius.circular(10),
     ),
     child: Row(
       children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: const BoxDecoration(
+            color: Color(0xFF36984D),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
         ),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 9,
+              height: 1.2,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2FA455),
+            ),
           ),
         ),
       ],
+    ),
+  );
+}
+
+class _RoleOption extends StatelessWidget {
+  const _RoleOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: selected ? const Color(0xFFF4E9A6) : Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 32,
+        child: Center(child: Text(label, style: const TextStyle(fontSize: 12))),
+      ),
     ),
   );
 }
@@ -508,51 +555,85 @@ class _UserRequestTile extends StatelessWidget {
   final RequestModel request;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(top: 5),
-    padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: const Color(0xFFB0B0B0),
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                request.description,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) {
+    final statusColor = switch (request.status) {
+      'completed' => const Color(0xFFC8E7D0),
+      'in_progress' => const Color(0xFFF4E9A6),
+      _ => const Color(0xFFE8A39A),
+    };
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFB0CBB5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  request.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right),
-          ],
-        ),
-        Text(
-          '${request.id} · ${request.issueType}',
-          style: const TextStyle(fontSize: 11),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                request.facilityId,
-                style: const TextStyle(fontSize: 10),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+          Text(
+            '${request.id} - ${request.issueType}',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF555555)),
+          ),
+          const SizedBox(height: 7),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 21,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 13),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          request.facilityId,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            Text(
-              request.status.replaceAll('_', ' '),
-              style: const TextStyle(fontSize: 10),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  request.status.replaceAll('_', ' '),
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF93813C)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
-
 String _averageCompletionTime(
   List<RequestModel> completed, {
   required bool isStaff,
@@ -570,7 +651,7 @@ String _averageCompletionTime(
     totalMinutes += minutes;
     completedCount++;
   }
-  if (completedCount == 0) return '—';
+  if (completedCount == 0) return 'â€”';
 
   final average = totalMinutes ~/ completedCount;
   return average >= 60 ? '${average ~/ 60}h' : '${average}min';

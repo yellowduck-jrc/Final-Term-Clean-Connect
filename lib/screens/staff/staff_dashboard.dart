@@ -227,24 +227,6 @@ class _StaffDashboardContent extends StatelessWidget {
                           ),
                         ),
                       ),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.availableRequests,
-                        ),
-                        style: TextButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'View All  ›',
-                          style: TextStyle(
-                            color: Color(0xFF3977FF),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 3),

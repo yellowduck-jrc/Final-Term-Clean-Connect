@@ -15,6 +15,43 @@ const _requestMint = Color(0xFFD1EEE5);
 class ManageRequestsScreen extends StatelessWidget {
   const ManageRequestsScreen({super.key});
 
+  Future<void> _deleteRequest(
+    BuildContext context,
+    RequestModel request,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete request?'),
+        content: const Text(
+          'This permanently deletes the request and its task history.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await RequestService().deleteRequest(request.id);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to delete request: $error')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,18 +129,22 @@ class ManageRequestsScreen extends StatelessWidget {
                           padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                           itemCount: requests.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 6),
-                          itemBuilder: (context, index) => _RequestSummaryCard(
-                            request: requests[index],
-                            users: usersSnapshot.data!,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => _AdminRequestDetailsScreen(
-                                  request: requests[index],
+                          itemBuilder: (context, index) {
+                            final request = requests[index];
+                            return _RequestSummaryCard(
+                              request: request,
+                              users: usersSnapshot.data!,
+                              onDelete: () => _deleteRequest(context, request),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => _AdminRequestDetailsScreen(
+                                    request: request,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         );
                       },
                     );
@@ -146,11 +187,13 @@ class _RequestSummaryCard extends StatelessWidget {
     required this.request,
     required this.users,
     required this.onTap,
+    required this.onDelete,
   });
 
   final RequestModel request;
   final List<AppUserModel> users;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +211,7 @@ class _RequestSummaryCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RequestThumbnail(request: request, width: 48, height: 56),
+              RequestThumbnail(request: request, width: 52, height: 52),
               const SizedBox(width: 7),
               Expanded(
                 child: Column(
@@ -200,14 +243,26 @@ class _RequestSummaryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '⌖  Floor ${request.floor ?? '?'} | ${request.facilityId}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 8,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 11,
+                          color: Colors.black54,
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            'Floor ${request.floor ?? '?'} | ${request.facilityId}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     const Text(
@@ -251,6 +306,20 @@ class _RequestSummaryCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 5),
+                        _RequestCardAction(
+                          icon: Icons.edit,
+                          color: _requestGreen,
+                          tooltip: 'Edit request',
+                          onPressed: onTap,
+                        ),
+                        const SizedBox(width: 3),
+                        _RequestCardAction(
+                          icon: Icons.delete,
+                          color: Colors.red,
+                          tooltip: 'Delete request',
+                          onPressed: onDelete,
+                        ),
+                        const SizedBox(width: 5),
                         _RequestStatusPill(status: request.status),
                       ],
                     ),
@@ -263,6 +332,38 @@ class _RequestSummaryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RequestCardAction extends StatelessWidget {
+  const _RequestCardAction({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: SizedBox(
+      width: 20,
+      height: 20,
+      child: Material(
+        color: color,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: Icon(icon, color: Colors.white, size: 11),
+        ),
+      ),
+    ),
+  );
 }
 
 class _RequestStatusPill extends StatelessWidget {
@@ -307,6 +408,7 @@ class _AdminRequestDetailsScreenState
     extends State<_AdminRequestDetailsScreen> {
   late String _status = widget.request.status;
   late String? _assignedTo = widget.request.assignedTo;
+  late bool _assignmentEnabled = widget.request.assignedTo != null;
   bool _isSaving = false;
 
   @override
@@ -314,9 +416,19 @@ class _AdminRequestDetailsScreenState
     final request = widget.request;
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF242735),
+        foregroundColor: Colors.white,
+        centerTitle: true,
         leading: const NavigationBackButton(),
         automaticallyImplyLeading: false,
-        title: const Text('Request Overview'),
+        title: const Text('Request'),
+        actions: [
+          IconButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.notifications),
+            icon: const Icon(Icons.notifications_none),
+          ),
+        ],
       ),
       body: StreamBuilder<List<AppUserModel>>(
         stream: UserService().watchUsersByRole('staff'),
@@ -332,191 +444,205 @@ class _AdminRequestDetailsScreenState
           final staff = usersSnapshot.data!
               .where((user) => user.role.toLowerCase() == 'staff')
               .toList();
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
-            children: [
-              _DetailSection(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: ColoredBox(
+              color: Colors.white,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 13, 16, 24),
+                children: [
+                  _DetailSection(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _BlueSquare(),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                request.description,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                _dateLabel(request.createdAt),
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                            ],
+                        Text(
+                          _titleCase(request.issueType),
+                          style: const TextStyle(
+                            color: _requestGreen,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
                           ),
+                        ),
+                        Text(_longDateLabel(request.createdAt)),
+                        const Divider(height: 18),
+                        const Text(
+                          'Description',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        Text(
+                          request.description,
+                          style: const TextStyle(fontSize: 11),
                         ),
                       ],
                     ),
-                    const Divider(),
-                    const Text('Description', style: TextStyle(fontSize: 11)),
-                    Text(
-                      request.description,
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 9),
-              _DetailSection(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Location',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      'Floor ${request.floor ?? '?'} · Near ${request.facilityId}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFB0B0B0),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                  ),
+                  const SizedBox(height: 12),
+                  _DetailSection(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Icon(Icons.map_outlined, size: 18),
-                            SizedBox(width: 6),
-                            Text('Map preview unavailable'),
+                            const Icon(
+                              Icons.location_on,
+                              color: _requestGreen,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 9),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Location',
+                                  style: TextStyle(
+                                    color: _requestGreen,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  '${_floorLabel(request.floor)}  \u00B7  Near ${request.facilityId}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 9),
-              _DetailSection(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Assign Worker',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String?>(
-                      initialValue: staff.any((user) => user.uid == _assignedTo)
-                          ? _assignedTo
-                          : null,
-                      decoration: const InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Unassigned'),
-                        ),
-                        for (final user in staff)
-                          DropdownMenuItem<String?>(
-                            value: user.uid,
-                            child: Text(user.fullName),
+                        const SizedBox(height: 9),
+                        Container(
+                          height: 106,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _requestGreen),
+                            borderRadius: BorderRadius.circular(6),
                           ),
+                          clipBehavior: Clip.antiAlias,
+                          child: RequestThumbnail(
+                            request: request,
+                            width: double.infinity,
+                            height: 106,
+                          ),
+                        ),
                       ],
-                      onChanged: (value) => setState(() => _assignedTo = value),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 9),
-              _DetailSection(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Status',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+                  ),
+                  const SizedBox(height: 12),
+                  _DetailSection(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        for (final status in const [
-                          'pending',
-                          'in_progress',
-                          'completed',
-                        ])
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: ChoiceChip(
-                                label: Text(_statusLabel(status)),
-                                selected: _status == status,
-                                onSelected: (_) =>
-                                    setState(() => _status = status),
-                                showCheckmark: false,
-                                backgroundColor: Colors.white,
-                                selectedColor: const Color(0xFFF7EFB9),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Assign Worker',
+                              style: TextStyle(
+                                color: _requestGreen,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            Switch.adaptive(
+                              value: _assignmentEnabled,
+                              activeTrackColor: _requestGreen,
+                              onChanged: (enabled) => setState(() {
+                                _assignmentEnabled = enabled;
+                                if (!enabled) _assignedTo = null;
+                              }),
+                            ),
+                          ],
+                        ),
+                        if (_assignmentEnabled) ...[
+                          DropdownButtonFormField<String?>(
+                            initialValue:
+                                staff.any((user) => user.uid == _assignedTo)
+                                ? _assignedTo
+                                : null,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                            items: [
+                              for (final user in staff)
+                                DropdownMenuItem<String?>(
+                                  value: user.uid,
+                                  child: Text(user.fullName),
+                                ),
+                            ],
+                            onChanged: (value) =>
+                                setState(() => _assignedTo = value),
                           ),
+                        ],
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 9),
-              _DetailSection(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Request Activity',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '●  Request Made\n    ${_dateLabel(request.createdAt)} by Student',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _isSaving
-                            ? null
-                            : () => _saveChanges(context),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF69CFA4),
+                  ),
+                  const SizedBox(height: 9),
+                  _DetailSection(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Status',
+                          style: TextStyle(
+                            color: _requestGreen,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            for (final status in const [
+                              'pending',
+                              'in_progress',
+                              'completed',
+                            ])
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 7),
+                                  child: _StatusOption(
+                                    label: _statusLabel(status),
+                                    selected: _status == status,
+                                    onTap: () =>
+                                        setState(() => _status = status),
+                                  ),
                                 ),
-                              )
-                            : const Text('Save Changes'),
-                      ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 42,
+                    child: FilledButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () => _saveChanges(context),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _requestGreen,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Save Changes'),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -545,6 +671,40 @@ class _AdminRequestDetailsScreenState
   }
 }
 
+class _StatusOption extends StatelessWidget {
+  const _StatusOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: selected ? _requestGreen : Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: SizedBox(
+        height: 31,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: selected ? Colors.white : Colors.black,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _DetailSection extends StatelessWidget {
   const _DetailSection({required this.child});
 
@@ -561,31 +721,32 @@ class _DetailSection extends StatelessWidget {
   );
 }
 
-class _BlueSquare extends StatelessWidget {
-  const _BlueSquare();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 50,
-    height: 42,
-    decoration: BoxDecoration(
-      color: const Color(0xFF70A6D4),
-      borderRadius: BorderRadius.circular(12),
-    ),
-  );
-}
-
 String _statusLabel(String status) => switch (status) {
   'in_progress' => 'In Progress',
   'completed' => 'Complete',
   _ => 'Pending',
 };
 
-String _dateLabel(DateTime? date) {
+String _titleCase(String value) => value.isEmpty
+    ? value
+    : '${value[0].toUpperCase()}${value.substring(1).toLowerCase()}';
+
+String _floorLabel(int? floor) => switch (floor) {
+  1 => 'First Floor',
+  2 => 'Second Floor',
+  3 => 'Third Floor',
+  _ => 'Floor ${floor ?? '?'}',
+};
+
+String _longDateLabel(DateTime? date) {
   if (date == null) return 'Date unavailable';
   final local = date.toLocal();
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
   final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
   final minute = local.minute.toString().padLeft(2, '0');
   final meridiem = local.hour < 12 ? 'AM' : 'PM';
-  return '${local.month}/${local.day}/${local.year} · $hour:$minute $meridiem';
+  return '${months[local.month - 1]} ${local.day}, ${local.year} \u00B7 $hour:$minute $meridiem';
 }

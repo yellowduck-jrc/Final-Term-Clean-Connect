@@ -38,11 +38,67 @@ class NotificationsScreen extends StatelessWidget {
                 if (profileSnapshot.data?.role == 'staff') {
                   return _StaffAssignmentNotifications(uid: uid);
                 }
+                if (profileSnapshot.data?.role == 'admin') {
+                  return const _AdminCompletedTaskNotifications();
+                }
                 return _RequestStatusNotifications(uid: uid);
               },
             ),
     );
   }
+}
+
+class _AdminCompletedTaskNotifications extends StatelessWidget {
+  const _AdminCompletedTaskNotifications();
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<RequestModel>>(
+    stream: RequestService().watchAllRequests(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Center(
+          child: Text('Unable to load completed tasks: ${snapshot.error}'),
+        );
+      }
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      final completedTasks = snapshot.data!
+          .where(
+            (request) =>
+                request.status == 'completed' &&
+                request.assignedTo != null &&
+                request.assignedTo!.isNotEmpty,
+          )
+          .toList();
+      if (completedTasks.isEmpty) {
+        return const Center(child: Text('No completed staff tasks yet.'));
+      }
+
+      return ListView.separated(
+        itemCount: completedTasks.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final request = completedTasks[index];
+          final completedAt = request.completedAt?.toLocal();
+          final completedLabel = completedAt == null
+              ? 'Completion time unavailable'
+              : 'Completed ${completedAt.month}/${completedAt.day}/${completedAt.year}';
+          return ListTile(
+            leading: const Icon(Icons.task_alt_outlined),
+            title: Text('${request.issueType} task completed'),
+            subtitle: Text(
+              '${request.facilityId}: ${request.description}\n$completedLabel',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const StatusBadge(status: 'completed'),
+          );
+        },
+      );
+    },
+  );
 }
 
 class _StaffAssignmentNotifications extends StatelessWidget {

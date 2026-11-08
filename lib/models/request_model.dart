@@ -13,6 +13,7 @@ class RequestModel {
     this.assignedTo,
     this.isAdminAssigned = false,
     this.imageUrl,
+    this.photoBase64,
     this.acceptedAt,
     this.completedAt,
   });
@@ -27,6 +28,7 @@ class RequestModel {
   final String? assignedTo;
   final bool isAdminAssigned;
   final String? imageUrl;
+  final String? photoBase64;
   final DateTime? createdAt;
   final DateTime? acceptedAt;
   final DateTime? completedAt;
@@ -43,6 +45,7 @@ class RequestModel {
       assignedTo: data['assignedTo'] as String?,
       isAdminAssigned: data['isAdminAssigned'] as bool? ?? false,
       imageUrl: data['imageUrl'] as String?,
+      photoBase64: data['photoBase64'] as String?,
       createdAt: _dateTime(data['createdAt']),
       acceptedAt: _dateTime(data['acceptedAt']),
       completedAt: _dateTime(data['completedAt']),

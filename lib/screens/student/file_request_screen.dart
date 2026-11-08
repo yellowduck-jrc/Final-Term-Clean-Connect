@@ -141,23 +141,40 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   }
 
   Future<void> pickPhoto() async {
+    await _pickPhoto(ImageSource.gallery);
+  }
+
+  Future<void> takePhoto() => _pickPhoto(ImageSource.camera);
+
+  Future<void> _pickPhoto(ImageSource source) async {
     setState(() => isPickingPhoto = true);
     try {
-      final file = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 75,
-        maxWidth: 1280,
-        maxHeight: 1280,
+      final photo = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 45,
       );
-      if (!mounted || file == null) return;
+      if (!mounted || photo == null) return;
 
-      final bytes = await file.readAsBytes();
+      final bytes = await photo.readAsBytes();
       if (!mounted) return;
+      if (bytes.length > RequestService.maxPhotoBytes) {
+        showMessage(
+          'Photo is too large after compression. Choose a smaller photo.',
+        );
+        return;
+      }
       setState(() {
         selectedPhotoBytes = bytes;
       });
     } catch (error) {
-      if (mounted) showMessage('Unable to select a photo: $error');
+      if (mounted) {
+        showMessage(
+          'Unable to ${source == ImageSource.camera ? 'take' : 'select'} '
+          'a photo: $error',
+        );
+      }
     } finally {
       if (mounted) setState(() => isPickingPhoto = false);
     }
@@ -281,6 +298,14 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
                               fit: BoxFit.cover,
                             ),
                     ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: isPickingPhoto ? null : takePhoto,
+                    icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                    label: const Text('Open camera'),
                   ),
                 ),
                 const SizedBox(height: 16),
