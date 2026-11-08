@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Clean Connect uses the camera to attach a photo to a cleaning request.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Clean Connect lets you choose a photo to attach to a cleaning request.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

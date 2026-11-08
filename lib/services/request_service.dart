@@ -1,12 +1,14 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/request_model.dart';
 import 'facility_service.dart';
 
 class RequestService {
+  static const maxPhotoBytes = 650 * 1024;
+
   RequestService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -22,7 +24,6 @@ class RequestService {
     required String issueType,
     required String description,
     Uint8List? imageBytes,
-    String imageExtension = 'jpg',
   }) async {
     if (reportedBy.trim().isEmpty ||
         facilityId.trim().isEmpty ||
@@ -32,6 +33,11 @@ class RequestService {
         issueType.trim().isEmpty) {
       throw ArgumentError(
         'A reporter, facility, valid floor, issue type, and description are required.',
+      );
+    }
+    if (imageBytes != null && imageBytes.length > maxPhotoBytes) {
+      throw ArgumentError(
+        'The photo is too large for Firestore. Choose a smaller photo.',
       );
     }
 
@@ -44,19 +50,6 @@ class RequestService {
     }
 
     final doc = _requests.doc();
-    String? imageUrl;
-    if (imageBytes != null) {
-      final extension = _normalizedImageExtension(imageExtension);
-      final imageReference = FirebaseStorage.instance.ref().child(
-        'request_photos/${reportedBy.trim()}/${doc.id}.$extension',
-      );
-      await imageReference.putData(
-        imageBytes,
-        SettableMetadata(contentType: _imageContentType(extension)),
-      );
-      imageUrl = await imageReference.getDownloadURL();
-    }
-
     await doc.set({
       'reportedBy': reportedBy.trim(),
       'facilityId': facilityId.trim(),
@@ -69,20 +62,11 @@ class RequestService {
       'createdAt': FieldValue.serverTimestamp(),
       'acceptedAt': null,
       'completedAt': null,
-      'imageUrl': imageUrl,
+      'imageUrl': null,
+      'photoBase64': imageBytes == null ? null : base64Encode(imageBytes),
     });
     return doc.id;
   }
-
-  String _normalizedImageExtension(String extension) {
-    final normalized = extension.toLowerCase().replaceFirst('.', '');
-    return const {'jpg', 'jpeg', 'png', 'webp', 'gif'}.contains(normalized)
-        ? normalized
-        : 'jpg';
-  }
-
-  String _imageContentType(String extension) =>
-      extension == 'jpg' ? 'image/jpeg' : 'image/$extension';
 
   Stream<List<RequestModel>> watchAllRequests() =>
       _watch(_requests.snapshots());

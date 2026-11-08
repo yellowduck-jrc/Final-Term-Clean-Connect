@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../models/request_model.dart';
@@ -46,12 +49,31 @@ class RequestThumbnail extends StatelessWidget {
     );
 
     final imageUrl = request.imageUrl;
+    final encodedPhoto = request.photoBase64;
+    final Uint8List? photoBytes;
+    try {
+      photoBytes = encodedPhoto == null || encodedPhoto.isEmpty
+          ? null
+          : base64Decode(encodedPhoto);
+    } on FormatException {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(width: width, height: height, child: categoryIcon()),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: SizedBox(
         width: width,
         height: height,
-        child: imageUrl == null || imageUrl.isEmpty
+        child: photoBytes != null
+            ? Image.memory(
+                photoBytes,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => categoryIcon(),
+              )
+            : imageUrl == null || imageUrl.isEmpty
             ? categoryIcon()
             : Image.network(
                 imageUrl,

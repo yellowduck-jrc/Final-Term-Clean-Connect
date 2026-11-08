@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../app/navigation_observer.dart';
 import '../../app/app_routes.dart';
@@ -41,7 +41,6 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   bool isSubmitting = false;
   bool isPickingPhoto = false;
   Uint8List? selectedPhotoBytes;
-  String? selectedPhotoExtension;
 
   final Color navy = const Color(0xFF242735);
   final Color green = const Color(0xFF20A879);
@@ -101,7 +100,6 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
         issueType: issueType,
         description: descriptionController.text,
         imageBytes: selectedPhotoBytes,
-        imageExtension: selectedPhotoExtension ?? 'jpg',
       );
 
       if (!mounted) return;
@@ -116,7 +114,6 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
 
       setState(() {
         selectedPhotoBytes = null;
-        selectedPhotoExtension = null;
         selectedFacilityId = null;
         selectedRoomName = null;
         selectedFloor = null;
@@ -144,19 +141,35 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
   }
 
   Future<void> pickPhoto() async {
+    await _pickPhoto(ImageSource.gallery);
+  }
+
+  Future<void> takePhoto() => _pickPhoto(ImageSource.camera);
+
+  Future<void> _pickPhoto(ImageSource source) async {
     setState(() => isPickingPhoto = true);
     try {
-      final file = await FilePicker.pickFile(type: FileType.image);
-      if (!mounted || file == null) return;
+      final photo = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 45,
+      );
+      if (!mounted || photo == null) return;
 
-      final bytes = await file.readAsBytes();
+      final bytes = await photo.readAsBytes();
       if (!mounted) return;
+      if (bytes.length > RequestService.maxPhotoBytes) {
+        showMessage(
+          'Photo is too large after compression. Choose a smaller photo.',
+        );
+        return;
+      }
       setState(() {
         selectedPhotoBytes = bytes;
-        selectedPhotoExtension = file.extension;
       });
     } catch (error) {
-      if (mounted) showMessage('Unable to select a photo: $error');
+      if (mounted) showMessage('Unable to take a photo: $error');
     } finally {
       if (mounted) setState(() => isPickingPhoto = false);
     }
@@ -280,6 +293,14 @@ class _FileRequestScreenState extends State<FileRequestScreen> {
                               fit: BoxFit.cover,
                             ),
                     ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: isPickingPhoto ? null : takePhoto,
+                    icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                    label: const Text('Open camera'),
                   ),
                 ),
                 const SizedBox(height: 16),
