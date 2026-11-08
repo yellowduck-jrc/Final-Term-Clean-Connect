@@ -185,7 +185,7 @@ class _UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<_UserProfileScreen> {
   late String _role = widget.user.role;
-  late bool _isActive = widget.user.isActive;
+  late final bool _isActive = widget.user.isActive;
   bool _isSaving = false;
 
   @override
